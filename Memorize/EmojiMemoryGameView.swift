@@ -13,21 +13,37 @@ struct EmojiMemoryGameView: View {
     @Namespace private var dealingNamespace
     
     var body: some View {
-        ZStack(alignment: .bottom) {
-            VStack {
-                gameBody
-                HStack {
-                    restart
-                    Spacer()
-                    shuffle
+        VStack {
+            ZStack(alignment: .bottom) {
+                VStack {
+                    title
+                    Group {
+                        if themeButtonClicked {
+                            themeBody
+                        } else {
+                            gameBody
+                        }
+                    }
+                    HStack {
+                        restart
+                        Spacer()
+                        shuffle
+                    }
+                    .padding(.horizontal)
+                    
                 }
-                .padding(.horizontal)
-                
+                deckBody
             }
-            
-            deckBody
+            .padding()
+            HStack {
+                ForEach(game.themes) { theme in
+                    ThemeButton(theme) {
+                        game.setTheme(theme)
+                        themeButtonClicked = true
+                    }
+                }
+            }
         }
-        .padding()
     }
     
     @State private var dealt = Set<Int>()
@@ -52,6 +68,11 @@ struct EmojiMemoryGameView: View {
         -Double(game.cards.firstIndex(where: {$0.id == card.id}) ?? 0)
     }
     
+    var title: some View {
+        Text("Memorize!")
+            .font(.title)
+    }
+    
     var gameBody: some View {
         AspectVGrid(items: game.cards,  aspectRatio: CardConstants.aspectRatio) { card in
             if isUndealt(card) || (card.isMatched && !card.isFaceUp) {
@@ -71,6 +92,21 @@ struct EmojiMemoryGameView: View {
         }
         .foregroundColor(CardConstants.color)
     }
+    
+    var themeBody: some View {
+        let cards = game.cards.filter { $0.id % 2 == 0}
+        return AspectVGrid(items: cards, aspectRatio: CardConstants.aspectRatio) { card in
+            GeometryReader { geometry in
+                Text(card.content)
+                    .font(Font.system(size: CardView.DrawingConstants.fontSize))
+                    .scaleEffect(CardView.scale(thatFits: geometry.size))
+                    .cardify(isFaceUp: true)
+            }
+            .padding(4)
+        }
+    }
+    
+    @State private var themeButtonClicked = false
     
     var deckBody: some View {
         ZStack {
@@ -110,6 +146,8 @@ struct EmojiMemoryGameView: View {
             }
         }
     }
+    
+    
 
     private struct CardConstants {
         static let color = Color.red
@@ -153,7 +191,7 @@ struct CardView: View {
                     .rotationEffect(Angle(degrees: card.isMatched ? 360 : 0))
                     .animation(Animation.linear(duration: 1).repeatForever(autoreverses: false))
                     .font(Font.system(size: DrawingConstants.fontSize))
-                    .scaleEffect(scale(thatFits: geometry.size))
+                    .scaleEffect(CardView.scale(thatFits: geometry.size))
             }
             .cardify(isFaceUp: card.isFaceUp)
         })
@@ -163,15 +201,38 @@ struct CardView: View {
         Font.system(size: min(size.width, size.height) * DrawingConstants.fontScale)
     }
     
-    private func scale(thatFits size: CGSize) -> CGFloat {
+    static func scale(thatFits size: CGSize) -> CGFloat {
         min(size.width, size.height) / DrawingConstants.fontSize * DrawingConstants.fontScale
     }
     
-    private struct DrawingConstants {
+    struct DrawingConstants {
         static let fontScale: CGFloat = 0.65
         static let fontSize: CGFloat = 32
         static let circlePadding: CGFloat = 5
         static let circleOpacity: CGFloat = 0.5
+    }
+}
+
+struct ThemeButton: View {
+    private let theme: EmojiMemoryGame.Theme
+    private let action: () -> Void
+    
+    init(_ theme: EmojiMemoryGame.Theme, action: @escaping () -> Void) {
+        self.theme = theme
+        self.action = action
+    }
+    
+    var body: some View {
+        Button(action: action) {
+            VStack {
+                Image(systemName: theme.systemImage)
+                    .font(.largeTitle)
+                Label(theme.name, systemImage: theme.systemImage)
+                    .labelStyle(.titleOnly)
+                    .font(.caption)
+                    .frame(maxWidth: .infinity) // spread the buttons evenly across the container width
+            }
+        }
     }
 }
 
