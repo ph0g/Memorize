@@ -12,10 +12,15 @@ struct ContentView: View {
     
     var body: some View {
         VStack {
+            HStack {
+                Spacer()
+                Text(String(format: "Score : %5d", viewModel.score))
+                Spacer()
+            }
             ScrollView {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 65))]) {
                     ForEach(viewModel.cards) { card in
-                        CardView(card)
+                        CardView(card, textOnBack: viewModel.themeName, gradient: viewModel.themeGradient)
                             .aspectRatio(2/3, contentMode: .fit)
                             .onTapGesture {
                                 viewModel.choose(card)
@@ -23,17 +28,27 @@ struct ContentView: View {
                     }
                 }
                 .padding(.horizontal)
-                .foregroundColor(.red)
+                .foregroundColor(viewModel.themeColor)
             }
+            HStack {
+                Spacer()
+                Button("New Game", action: viewModel.startNewGame)
+                Spacer()
+            }
+
         }
     }
 }
     
 struct CardView: View {
-    let card: MemoryGame<String>.Card
+    let card: MemoryGame<Character>.Card
+    let textOnBack: String
+    let gradient: Gradient?
     
-    init(_ card: MemoryGame<String>.Card) {
+    init(_ card: MemoryGame<Character>.Card, textOnBack: String, gradient: Gradient?) {
         self.card = card
+        self.textOnBack = textOnBack
+        self.gradient = gradient
     }
     
     var body: some View {
@@ -43,11 +58,19 @@ struct CardView: View {
             if card.isFaceUp {
                 shape.fill().foregroundColor(.white)
                 shape.strokeBorder(lineWidth: 3)
-                Text(card.content).font(.largeTitle)
+                Text(String(card.content)).font(.largeTitle)
             } else if card.isMatched {
                 shape.opacity(0.0)
             } else {
-                shape.fill()
+                if let gradient = gradient {
+                    shape.fill(gradient)
+                } else {
+                    shape.fill()
+                }
+                Text(textOnBack)
+                    .font(.caption)
+                    .foregroundColor(Color.black)
+                    .rotationEffect(Angle(degrees: 45))
             }
         }
     }
